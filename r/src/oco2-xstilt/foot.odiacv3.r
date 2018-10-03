@@ -19,11 +19,12 @@
 # store output contribution map into the same by-d directory,
 #   remove store.path, DW, 07/26/2018
 # remove foot.path, use full path as foot.file, DW, 07/26/2018
+# bug fixed, DW, 10/01/2018 
 
 foot.odiacv3 <- function(foot.file, emiss.file, workdir, txtfile = NULL,
   lon.lat = NULL, plotTF = F, writeTF = F){
 
-  library(raster)
+  library(raster); library(stringr)
 
   # plot emissions
   if (plotTF) {
@@ -66,9 +67,13 @@ foot.odiacv3 <- function(foot.file, emiss.file, workdir, txtfile = NULL,
   }  # end if emiss.file
 
   # from foot.file, get receptor info
-  receptor <- unlist(strsplit(gsub('_X_foot.nc', '', basename(foot.file)), '_'))
-  receptor <- as.data.frame(matrix(receptor, byrow = T, ncol = 3),
-    stringsAsFactors = F) %>% mutate_all(funs(as.numeric), colnames(receptor))
+  nbin <- str_count(basename(foot.file[1]), '_') + 1
+  receptor <- unlist(strsplit(basename(foot.file), '_'))
+
+  receptor <- as.data.frame(matrix(receptor, byrow = T, ncol = nbin),
+    stringsAsFactors = F) 
+  receptor <- receptor[, 1:3] %>% 
+    mutate_all(funs(as.numeric), colnames(receptor))
     # mutate_all() convert character to numberic
   colnames(receptor) <- list('timestr', 'lon', 'lat')
 

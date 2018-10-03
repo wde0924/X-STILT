@@ -11,6 +11,7 @@
 
 ### Updates--
 # replace 'timestr', 'recp.lat', 'recp.lon' with 'receptor' from 'output', DW
+# add more variables 
 
 get.oco2.info <- function(oco2.path, receptor, diff.td = 1E-4){
 
@@ -56,15 +57,15 @@ get.oco2.info <- function(oco2.path, receptor, diff.td = 1E-4){
 
     ## grab column co2, averaging kernel, pressure weight and prior CO2 profiles
     ## dimensions--[levels, soundingID]
-    ap <- ncvar_get(oco2.dat, 'co2_profile_apriori')[, loc.index] # in ppm
-    pwf <- ncvar_get(oco2.dat, 'pressure_weight')[, loc.index]  # pwf
+    ap   <- ncvar_get(oco2.dat, 'co2_profile_apriori')[, loc.index] # in ppm
+    pwf  <- ncvar_get(oco2.dat, 'pressure_weight')[, loc.index]  # pwf
     pres <- ncvar_get(oco2.dat, 'pressure_levels')[, loc.index] # press in hPa
 
     # normalized averaging kernel (unitless)
     ak.norm <- ncvar_get(oco2.dat, 'xco2_averaging_kernel')[, loc.index]
 
     ## dimensions--[soundingID]
-    xco2 <- ncvar_get(oco2.dat, 'xco2')[loc.index]
+    xco2   <- ncvar_get(oco2.dat, 'xco2')[loc.index]
     grdhgt <- ncvar_get(oco2.dat, 'Sounding/altitude')[loc.index] # mASL
     xco2.uncert <- ncvar_get(oco2.dat, 'xco2_uncertainty')[loc.index] # ret err
 
@@ -72,6 +73,26 @@ get.oco2.info <- function(oco2.path, receptor, diff.td = 1E-4){
     footprint <- ncvar_get(oco2.dat, 'Sounding/footprint')[loc.index]
     psfc  <- ncvar_get(oco2.dat, 'Retrieval/psurf')[loc.index] # sfc pressure
 
+    # solar zenith angle at the time of the measurement, DW, 10/03/2018
+    sza <- ncvar_get(oco2.dat, 'solar_zenith_angle')[loc.index]  # sounding_solar_zenith
+
+    # zenith angle of the satellite at the time of the measurement
+    oza <- ncvar_get(oco2.dat, 'sensor_zenith_angle')[loc.index] # sounding_zenith
+
+    # solar azimuth angle at the time of the measurement; degrees East of North
+    # same as 'sounding_solar_azimuth' in full product
+    saa <- ncvar_get(oco2.dat, 'Sounding/solar_azimuth_angle')[loc.index] 
+
+    # azimuth angle of the satellite at the time of the measurement
+    # same as 'sounding_azimuth' in full product
+    oaa <- ncvar_get(oco2.dat, 'Sounding/sensor_azimuth_angle')[loc.index]
+
+    # Angular distance from viewing along the perfect glint direction
+    ga <- ncvar_get(oco2.dat, 'Sounding/glint_angle')[loc.index]  # degrees
+
+    # Airmass, computed as 1/cos(solar_zenith_angle) + 1/cos(sensor_zenith_angle)
+    air.mass <- ncvar_get(oco2.dat, 'Sounding/airmass')[loc.index]
+    
     # check whether is missing data
     ap[ap == -999999] <- NA
     pwf [pwf == -999999]  <- NA
@@ -94,7 +115,9 @@ get.oco2.info <- function(oco2.path, receptor, diff.td = 1E-4){
                      oco2.lon = find.lon, ak.norm = ak.norm, pwf = pwf,
                      pres = pres, ap = ap, oco2.grdhgt = grdhgt,
                      oco2.psfc = psfc, oco2.foot = footprint,
-                     oco2.xco2 = xco2, oco2.xco2.uncert = xco2.uncert)
+                     oco2.xco2 = xco2, oco2.xco2.uncert = xco2.uncert, 
+                     sza = sza, saa = saa, oza = oza, oaa = oaa, ga = ga, 
+                     air.mass = air.mass)
 
     all.info      # return both profiles and other retrivals
   }

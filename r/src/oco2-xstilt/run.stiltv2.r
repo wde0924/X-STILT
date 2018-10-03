@@ -29,6 +29,10 @@ run.stiltv2 <- function(namelist){
   run_foot   <- namelist$run_foot
   n_hours    <- namelist$nhrs
   numpar     <- namelist$numpar
+
+  # whether to use slant column rather than zenith column
+  slantTF    <- namelist$slantTF    
+
   varsiwant  <- namelist$varstrajec
   if (length(varsiwant) == 0) {
     varsiwant  <- c('time', 'indx', 'long', 'lati', 'zagl', 'sigw', 'tlgr',
@@ -198,17 +202,17 @@ run.stiltv2 <- function(namelist){
                         r_lati = receptors$lati, r_long = receptors$long,
                         r_zagl = receptors$zagl, random = random,
                         run_foot = run_foot, run_trajec = run_trajec,
-                        siguverr = siguverr, sigzierr = sigzierr,
-                        smooth_factor = smooth_factor, splitf = splitf,
-                        stilt_wd = stilt_wd, stilt.ver = stilt.ver,
-                        time_integrate = time_integrate, timeout = timeout,
-                        tkerd = tkerd, tkern = tkern, tlfrac = tlfrac,
-                        tluverr = tluverr, tlzierr = tlzierr, tratio = tratio,
-                        tvmix = tvmix, varsiwant = varsiwant, veght = veght,
-                        vscale = vscale, w_option = w_option,
+                        slantTF = slantTF, siguverr = siguverr, 
+                        sigzierr = sigzierr, smooth_factor = smooth_factor, 
+                        splitf = splitf, stilt_wd = stilt_wd, 
+                        stilt.ver = stilt.ver, time_integrate = time_integrate, 
+                        timeout = timeout, tkerd = tkerd, tkern = tkern, 
+                        tlfrac = tlfrac, tluverr = tluverr, tlzierr = tlzierr, 
+                        tratio = tratio, tvmix = tvmix, varsiwant = varsiwant, 
+                        veght = veght, vscale = vscale, w_option = w_option,
                         xmn = xmn, xmx = xmx, xres = xres, ymn = ymn, ymx = ymx,
-                        yres = yres, zicontroltf = zicontroltf,
-                        ziscale = ziscale, z_top = z_top, zcoruverr = zcoruverr)
+                        yres = yres, zcoruverr = zcoruverr, z_top = z_top,
+                        zicontroltf = zicontroltf, ziscale = ziscale)
   q('no')
 
 }
