@@ -103,9 +103,7 @@ simulation_stepv2 <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
 
       # Execute particle trajectory simulation, and read results into data frame
       output$receptor <- list(run_time = r_run_time,
-                              lati = r_lati,
-                              long = r_long,
-                              zagl = r_zagl)
+                              lati = r_lati, long = r_long, zagl = r_zagl)
 
       ## ---------------- modifications for OCO-2/X-STILT ------------------ ##
       # need modeled ground height to interpolate pres-hgt relation to
@@ -178,9 +176,9 @@ simulation_stepv2 <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
         return()
       } # end if length
 
-      # release particles from slant column, incoming/outgoing columns
-      if (slantTF) {
+      if (slantTF) {  # release particles from slant column receptors
        
+        ## release trajectories along the incoming solar slant path
         in.part <- calc_trajectory(varsiwant, conage, cpack, delt, dxf, dyf, 
                                    dzf, emisshrs, frhmax, frhs, frme, frmr, 
                                    frts, frvs, hscale, ichem, iconvect, initd, 
@@ -192,7 +190,20 @@ simulation_stepv2 <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
                                    random, splitf, tkerd, tkern, rm_dat, timeout, 
                                    tlfrac, tratio, tvmix, veght, vscale, 0, 
                                    w_option, zicontroltf, ziscale, z_top, rundir)
-                                   
+        if (is.null(in.part)) return()
+
+        # Bundle trajectory configuration metadata with trajectory informtation
+        in.output$particle <- in.part
+        in.output$params   <- read_config(file = file.path(rundir, 'CONC.CFG'))
+
+        # Save output object to compressed rds file and symlink to out/particles
+        # directory for convenience
+        saveRDS(in.output, in.output$file)
+        file.symlink(in.output$file, file.path(output_wd, 'particles',
+                                               basename(in.output$file))) %>%
+          invisible()
+        
+        ## release trajectories along the outgoing reflected solar slant path
         out.part <- calc_trajectory(varsiwant, conage, cpack, delt, dxf, dyf, 
                                    dzf, emisshrs, frhmax, frhs, frme, frmr, 
                                    frts, frvs, hscale, ichem, iconvect, initd, 
@@ -204,10 +215,22 @@ simulation_stepv2 <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
                                    random, splitf, tkerd, tkern, rm_dat, timeout, 
                                    tlfrac, tratio, tvmix, veght, vscale, 0, 
                                    w_option, zicontroltf, ziscale, z_top, rundir)
-                                   
+        if (is.null(out.part)) return()
+
+        # Bundle trajectory configuration metadata with trajectory informtation
+        out.output$particle <- out.part
+        out.output$params   <- read_config(file = file.path(rundir, 'CONC.CFG'))
+
+        # Save output object to compressed rds file and symlink to out/particles
+        # directory for convenience
+        saveRDS(out.output, out.output$file)
+        file.symlink(out.output$file, file.path(output_wd, 'particles',
+                                                basename(out.output$file))) %>%
+          invisible()
+        
         # further modifications needed ---
 
-      } else {
+      } else {  # if not release from a slant column 
         particle <- calc_trajectory(varsiwant, conage, cpack, delt, dxf, dyf, 
                                     dzf, emisshrs, frhmax, frhs, frme, frmr, 
                                     frts, frvs, hscale, ichem, iconvect, initd, 
@@ -220,52 +243,51 @@ simulation_stepv2 <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
                                     tlfrac, tratio, tvmix, veght, vscale, 0, 
                                     w_option, zicontroltf, ziscale, z_top, rundir)
         if (is.null(particle)) return()
+        
+        # Bundle trajectory configuration metadata with trajectory informtation
+        output$particle <- particle
+        output$params <- read_config(file = file.path(rundir, 'CONC.CFG'))
+
+        # Optionally execute second trajectory simulations to quantify transport
+        # error using parameterized correlation length and time scales
+        xyerr <- write_winderr(siguverr, tluverr, zcoruverr, horcoruverr,
+                              file.path(rundir, 'WINDERR'))
+        zerr  <- write_zierr(sigzierr, tlzierr, horcorzierr,
+                            file = file.path(rundir, 'ZIERR'))
+        winderrtf <- (!is.null(xyerr)) + 2 * !is.null(zerr)
+        if (winderrtf > 0) {
+          particle_error <- calc_trajectory(varsiwant, conage, cpack, delt, dxf,
+                                            dyf, dzf, emisshrs, frhmax, frhs, 
+                                            frme, frmr, frts, frvs, hscale, 
+                                            ichem, iconvect, initd, isot, ivmax, 
+                                            kbls, kblt, kdef, khmax, kmix0, kmixd, 
+                                            kmsl, kpuff, krnd, kspl, kzmix, maxdim,
+                                            maxpar, met_files, mgmin, ncycl, ndump,
+                                            ninit, numpar, nturb, n_hours, outdt,
+                                            outfrac, output, p10f, qcycle, random,
+                                            splitf, tkerd, tkern, rm_dat, timeout,
+                                            tlfrac, tratio, tvmix, veght, vscale,
+                                            winderrtf, w_option, zicontroltf,
+                                            ziscale, z_top, rundir)
+          if (is.null(particle_error)) return()
+          output$particle_error <- particle_error
+          output$particle_error_params <- list(siguverr = siguverr,
+                                               tluverr = tluverr,
+                                               zcoruverr = zcoruverr,
+                                               horcoruverr = horcoruverr,
+                                               sigzierr = sigzierr,
+                                               tlzierr = tlzierr,
+                                               horcorzierr = horcorzierr,
+                                               ziscale = ziscale)
+        }  # end if winderrtf
+
+        # Save output object to compressed rds file and symlink to out/particles
+        # directory for convenience
+        saveRDS(output, output$file)
+        file.symlink(output$file, file.path(output_wd, 'particles',
+                                            basename(output$file))) %>%
+          invisible()
       }  # end if slantTF
-
-
-      # Bundle trajectory configuration metadata with trajectory informtation
-      output$particle <- particle
-      output$params <- read_config(file = file.path(rundir, 'CONC.CFG'))
-
-      # Optionally execute second trajectory simulations to quantify transport
-      # error using parameterized correlation length and time scales
-      xyerr <- write_winderr(siguverr, tluverr, zcoruverr, horcoruverr,
-                             file.path(rundir, 'WINDERR'))
-      zerr <- write_zierr(sigzierr, tlzierr, horcorzierr,
-                          file = file.path(rundir, 'ZIERR'))
-      winderrtf <- (!is.null(xyerr)) + 2 * !is.null(zerr)
-      if (winderrtf > 0) {
-        particle_error <- calc_trajectory(varsiwant, conage, cpack, delt, dxf,
-                                          dyf, dzf, emisshrs, frhmax, frhs, frme,
-                                          frmr, frts, frvs, hscale, ichem,
-                                          iconvect, initd, isot, ivmax, kbls,
-                                          kblt, kdef, khmax, kmix0, kmixd, kmsl,
-                                          kpuff, krnd, kspl, kzmix, maxdim,
-                                          maxpar, met_files, mgmin, ncycl, ndump,
-                                          ninit, numpar, nturb, n_hours, outdt,
-                                          outfrac, output, p10f, qcycle, random,
-                                          splitf, tkerd, tkern, rm_dat, timeout,
-                                          tlfrac, tratio, tvmix, veght, vscale,
-                                          winderrtf, w_option, zicontroltf,
-                                          ziscale, z_top, rundir)
-        if (is.null(particle_error)) return()
-        output$particle_error <- particle_error
-        output$particle_error_params <- list(siguverr = siguverr,
-                                             tluverr = tluverr,
-                                             zcoruverr = zcoruverr,
-                                             horcoruverr = horcoruverr,
-                                             sigzierr = sigzierr,
-                                             tlzierr = tlzierr,
-                                             horcorzierr = horcorzierr,
-                                             ziscale = ziscale)
-      }
-
-      # Save output object to compressed rds file and symlink to out/particles
-      # directory for convenience
-      saveRDS(output, output$file)
-      file.symlink(output$file, file.path(output_wd, 'particles',
-                                          basename(output$file))) %>%
-        invisible()
 
     } else {
       # If user opted to recycle existing trajectory files, read in the recycled
@@ -275,12 +297,13 @@ simulation_stepv2 <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
         warning('simulation_stepv2(): No _traj.rds file found in ', rundir,
                 '\n    skipping this timestep and trying the next...')
         return()
-      }
+      }  # end if file.exists
 
       # also need output to get xhgt info, DW, 06/01/2018
       output <- readRDS(output$file)
       particle <- output$particle
-    }
+    }  # end if run_trajec
+
 
     ## ---------------- modifications for OCO-2/X-STILT -------------------- ##
     # Weight footprint: call wgt.trajec.footv3() to weight trajec-level
@@ -324,7 +347,7 @@ simulation_stepv2 <- function(X, rm_dat = T, stilt_wd = getwd(), lib.loc = NULL,
       # add foot.res on foot_file, DW, 09/15/2018
       foot_file <- file.path(rundir, 
         paste0(basename(rundir), '_', signif(xres, 3), 'x', signif(yres, 3), 
-          '_foot.nc'))
+               '_foot.nc'))
         
       ### ------- add Trajecfoot() if stilt.ver = 1, DW, 07/17/2018 -------- ##
       if (stilt.ver == 1) {

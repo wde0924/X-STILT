@@ -38,7 +38,7 @@ site <- 'Riyadh'   # choose a city
 # error may occur on the following line, due to limit of google API
 #please insert your own API for finding city lat/lon
 #register_google(key = 'AIzaSyAHWX5uI57V4JrkIKOFbQlumgCRoT-RI1s') 
-lon.lat <- get.lon.lat(site, dlon = 1, dlat = 2, 
+lon.lat <- get.lon.lat(site, dlon = 1, dlat = 1, 
                        city.loc = data.frame(lon = 46.7166, lat = 24.6333))
 
 # required paths
@@ -201,7 +201,7 @@ if (selTF) {
 } else { recp.indx <- NULL }
 
 # whether to subset receptors when debugging
-recp.num <- 40           # can be a number for max num of receptors
+recp.num <- NULL           # can be a number for max num of receptors
 find.lat <- NULL           # for debug or test, model one sounding
 data.filter <- c('QF', 0)  # use WL or QF to filter data
 
@@ -302,10 +302,10 @@ namelist <- list(agl = agl, ak.wgt = ak.wgt, delt = delt, dmassTF = dmassTF,
 if (run_trajec | run_foot) {
 
   ## use SLURM for parallel simulation settings
-  n_nodes  <- 1
+  n_nodes  <- 6
   n_cores  <- ceiling(nrecp/n_nodes)
   job.time <- '24:00:00'
-  slurm    <- n_nodes > 0
+  slurm    <- n_nodes > 1
   namelist$slurm_options <- list(time = job.time, account = 'lin-kp',
                                  partition = 'lin-kp')
 
