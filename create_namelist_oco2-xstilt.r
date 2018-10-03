@@ -20,6 +20,7 @@
 # DW, 08/31/2018
 #
 # add emission uncertainty, DW, 09/06/2018
+# test slant column release of particles, DW, 10/03/2018
 # -----------------------------------------------------------------------------
 
 #### source all functions and load all libraries
@@ -36,8 +37,9 @@ site <- 'Riyadh'   # choose a city
 
 # error may occur on the following line, due to limit of google API
 #please insert your own API for finding city lat/lon
-register_google(key = 'AIzaSyAHWX5uI57V4JrkIKOFbQlumgCRoT-RI1s') 
-lon.lat <- get.lon.lat(site, dlon = 1, dlat = 2)
+#register_google(key = 'AIzaSyAHWX5uI57V4JrkIKOFbQlumgCRoT-RI1s') 
+lon.lat <- get.lon.lat(site, dlon = 1, dlat = 2, 
+                       city.loc = data.frame(lon = 46.7166, lat = 24.6333))
 
 # required paths
 oco2.ver   <- c('b7rb', 'b8r')[1]  # OCO-2 version
@@ -112,12 +114,13 @@ cat('Done with choosing cities & overpasses...\n')
 #### Whether forward/backward, release from a column or a box
 columnTF   <- T      # whether a column receptor or fixed receptor
 forwardTF  <- F      # forward or backward traj, if forward, release from a box
+slantTF    <- T      # whether to release particles in slant column, if columnTF
 
 # T:rerun hymodelc, even if particle location object found
 # F:re-use previously calculated particle location object
 run_trajec <- T      # whether to generate trajec
-run_foot   <- T      # whether to generate footprint
-run_sim    <- T      # whether to calculate simulated XCO2.ff, see STEP 8
+run_foot   <- F      # whether to generate footprint
+run_sim    <- F      # whether to calculate simulated XCO2.ff, see STEP 8
 if (run_trajec) cat('Need to generate trajec...\n')
 if (run_foot)   cat('Need to generate footprint...\n\n')
 
@@ -198,7 +201,7 @@ if (selTF) {
 } else { recp.indx <- NULL }
 
 # whether to subset receptors when debugging
-recp.num <- NULL           # can be a number for max num of receptors
+recp.num <- 40           # can be a number for max num of receptors
 find.lat <- NULL           # for debug or test, model one sounding
 data.filter <- c('QF', 0)  # use WL or QF to filter data
 
@@ -287,7 +290,7 @@ namelist <- list(agl = agl, ak.wgt = ak.wgt, delt = delt, dmassTF = dmassTF,
                  outdir = outdir, oco2.path = oco2.path, pbl.err = pbl.err,
                  projection = projection, pwf.wgt = pwf.wgt, 
                  recp.info = recp.info, run_foot = run_foot, 
-                 run_trajec = run_trajec, site = site,
+                 run_trajec = run_trajec, slantTF = slantTF, site = site,
                  smooth_factor = smooth_factor, stilt.ver = stilt.ver,
                  time_integrate = time_integrate, timestr = timestr, 
                  varstrajec = varstrajec, workdir = workdir)
@@ -299,7 +302,7 @@ namelist <- list(agl = agl, ak.wgt = ak.wgt, delt = delt, dmassTF = dmassTF,
 if (run_trajec | run_foot) {
 
   ## use SLURM for parallel simulation settings
-  n_nodes  <- 6
+  n_nodes  <- 1
   n_cores  <- ceiling(nrecp/n_nodes)
   job.time <- '24:00:00'
   slurm    <- n_nodes > 0
